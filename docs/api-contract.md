@@ -457,6 +457,7 @@ Register a new user (admin-only in production; open for demo seed).
   "present_today": 17,
   "absent_today": 1,
   "on_leave_today": 2,
+  "pending_leaves": 5,
   "department_absenteeism": [
     { "department": "Engineering", "rate": 0.05 },
     { "department": "Marketing", "rate": 0.12 }

@@ -157,7 +157,9 @@ analytics/
 ├── metrics.py           # Core KPI functions
 ├── trends.py            # Time-series aggregations
 ├── priority_queue.py    # HR attention ranking
-└── team_availability.py # Staffing analysis
+├── team_availability.py # Staffing analysis
+├── reports.py           # Report-ready export data
+└── __init__.py          # Public API
 ```
 
 ---

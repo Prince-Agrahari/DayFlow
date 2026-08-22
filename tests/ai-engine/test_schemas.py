@@ -5,21 +5,14 @@ import os
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "ai-engine"))
 
-# Import directly from schemas module (ai-engine is on sys.path)
-import importlib.util
-spec = importlib.util.spec_from_file_location(
-    "schemas",
-    os.path.join(os.path.dirname(__file__), "..", "..", "ai-engine", "schemas.py"),
+from schemas.models import (
+    AnomalyResult,
+    AnomalySeverity,
+    ConflictLevel,
+    LeaveRecommendationResult,
+    RiskLevel,
+    RiskSignalResult,
 )
-schemas = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(schemas)
-
-AnomalyResult = schemas.AnomalyResult
-AnomalySeverity = schemas.AnomalySeverity
-RiskSignalResult = schemas.RiskSignalResult
-RiskLevel = schemas.RiskLevel
-LeaveRecommendationResult = schemas.LeaveRecommendationResult
-ConflictLevel = schemas.ConflictLevel
 
 
 def test_anomaly_result_schema():
@@ -29,9 +22,12 @@ def test_anomaly_result_schema():
         score=-0.42,
         severity=AnomalySeverity.HIGH,
         reason="Unusual check-in pattern detected",
+        supporting_factors=["Late arrivals: 4/10 days"],
+        recommendation="Review attendance history with the employee.",
     )
     assert result.anomaly is True
     assert result.severity == AnomalySeverity.HIGH
+    assert result.supporting_factors
 
 
 def test_risk_signal_bounds():
@@ -41,6 +37,7 @@ def test_risk_signal_bounds():
         risk_level=RiskLevel.HIGH,
         reasons=["Increased absence frequency"],
         recommendations=["Schedule HR check-in"],
+        supporting_factors=["Absence trend increase: 15%"],
     )
     assert 0.0 <= result.risk_score <= 1.0
     assert result.risk_level == RiskLevel.HIGH
@@ -51,5 +48,6 @@ def test_leave_recommendation_schema():
         conflict_level=ConflictLevel.MEDIUM,
         recommendation="Consider approving with coverage plan",
         reasons=["Team availability at 62%"],
+        supporting_factors=["Team availability on 2026-01-10: 62%"],
     )
     assert result.conflict_level == ConflictLevel.MEDIUM

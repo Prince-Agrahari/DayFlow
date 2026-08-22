@@ -78,12 +78,16 @@ npm run dev
 ### 5. Full Stack (Docker)
 
 ```bash
-docker compose up --build
+docker compose --profile dev up -d
+docker compose exec backend python scripts/seed.py
 ```
 
 - **Frontend:** http://localhost:5173
 - **Backend API:** http://localhost:8000
 - **API Docs:** http://localhost:8000/docs
+- **Health:** http://localhost:8000/api/health
+
+Production: `docker compose --profile prod up -d --build`
 
 ## User Roles
 
@@ -107,6 +111,8 @@ See [docs/git-workflow.md](docs/git-workflow.md) for branch conventions.
 
 - [Architecture](docs/architecture.md) — system design & module boundaries
 - [API Contract](docs/api-contract.md) — REST endpoints & schemas
+- [Deployment](docs/deployment.md) — Docker, env vars, production checklist
+- [Demo Guide](docs/demo.md) — credentials, demo flow, seed data
 - [Git Workflow](docs/git-workflow.md) — branching & collaboration
 - [Contributing](CONTRIBUTING.md) — setup & code standards
 

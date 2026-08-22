@@ -175,9 +175,58 @@ def seed() -> None:
             emp_num += 1
 
         db.commit()
+        _apply_demo_patterns(db)
         print(f"Seeded 1 admin + {emp_num - 1} employees with attendance, leave, payroll, and notifications.")
     finally:
         db.close()
+
+
+def _apply_demo_patterns(db) -> None:
+    """Inject meaningful demo patterns for analytics, AI, and priority queue demos."""
+    john = db.query(EmployeeProfile).join(User).filter(User.email == "john@dayflow.com").first()
+    jane = db.query(EmployeeProfile).join(User).filter(User.email == "jane@dayflow.com").first()
+    today = date.today()
+
+    if john:
+        db.query(Attendance).filter(Attendance.employee_id == john.id, Attendance.date >= today - timedelta(days=14)).delete()
+        for i in range(14):
+            d = today - timedelta(days=i)
+            if d.weekday() >= 5:
+                continue
+            late = i < 5
+            absent = i in {0, 3}
+            if absent:
+                db.add(Attendance(employee_id=john.id, date=d, status=AttendanceStatus.ABSENT))
+                continue
+            check_in = datetime(d.year, d.month, d.day, 11 if late else 9, 30 if late else 5, tzinfo=timezone.utc)
+            hours = 3.5 if late else 8.0
+            db.add(Attendance(
+                employee_id=john.id, date=d,
+                check_in_time=check_in, check_out_time=check_in + timedelta(hours=hours),
+                working_hours=Decimal(str(hours)), status=AttendanceStatus.PRESENT, is_late=late,
+            ))
+
+    if jane:
+        start = today + timedelta(days=7)
+        end = start + timedelta(days=2)
+        db.add(LeaveRequest(
+            employee_id=jane.id, leave_type=LeaveType.PAID,
+            start_date=start, end_date=end, reason="Family vacation",
+            status=LeaveStatus.PENDING,
+        ))
+
+    engineering = db.query(EmployeeProfile).filter(EmployeeProfile.department == "Engineering").limit(4).all()
+    overlap_start = today + timedelta(days=5)
+    overlap_end = overlap_start + timedelta(days=2)
+    for idx, profile in enumerate(engineering[1:3]):
+        db.add(LeaveRequest(
+            employee_id=profile.id, leave_type=LeaveType.PAID,
+            start_date=overlap_start + timedelta(days=idx), end_date=overlap_end,
+            reason="Team overlap demo", status=LeaveStatus.APPROVED,
+            admin_comment="Approved for demo",
+        ))
+
+    db.commit()
 
 
 if __name__ == "__main__":

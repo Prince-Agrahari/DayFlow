@@ -11,6 +11,7 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./database/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql
+      - ./database/seed/demo_data.sql:/docker-entrypoint-initdb.d/02-demo-notes.sql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-dayflow} -d ${POSTGRES_DB:-dayflow_hrm}"]
       interval: 5s
@@ -37,22 +38,43 @@ services:
       - ./backend:/app
       - ./ai-engine:/ai-engine
       - ./analytics:/analytics
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 
   frontend:
     image: node:20-alpine
-    container_name: dayflow-frontend
+    container_name: dayflow-frontend-dev
+    profiles: ["dev"]
     working_dir: /app
     ports:
       - "${FRONTEND_PORT:-5173}:5173"
     environment:
       VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:8000/api}
+      VITE_USE_MOCK: ${VITE_USE_MOCK:-false}
     volumes:
       - ./frontend:/app
       - frontend_node_modules:/app/node_modules
     command: sh -c "npm install && npm run dev -- --host 0.0.0.0"
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
+
+  frontend-prod:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: dayflow-frontend
+    profiles: ["prod"]
+    ports:
+      - "${FRONTEND_PORT:-8080}:80"
+    depends_on:
+      backend:
+        condition: service_healthy
 
 volumes:
   postgres_data:
