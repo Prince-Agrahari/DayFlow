@@ -10,6 +10,8 @@ passlib[bcrypt]>=1.7.4
 python-multipart>=0.0.12
 alembic>=1.14.0
 httpx>=0.28.0
-
-# Shared modules (installed via editable or PYTHONPATH)
-# ai-engine and analytics are sibling packages
+google-generativeai>=0.8.0
+scikit-learn>=1.6.0
+numpy>=2.0.0
+pandas>=2.2.0
+pytest>=8.3.0
