@@ -1,4 +1,4 @@
-"""Attendance routes."""
+"""Attendance routes — paths match docs/api-contract.md."""
 
 from fastapi import APIRouter, Query
 
@@ -21,7 +21,7 @@ def check_out(db: DBSession, profile: CurrentEmployee, current_user: CurrentUser
     return attendance_service._attendance_response(record)
 
 
-@router.get("/my", response_model=AttendancePeriodResponse)
+@router.get("/me", response_model=AttendancePeriodResponse)
 def my_attendance(db: DBSession, profile: CurrentEmployee, period: str = Query("weekly", pattern="^(daily|weekly|monthly)$")):
     return attendance_service.get_attendance_for_profile(db, profile, period)
 
@@ -29,6 +29,23 @@ def my_attendance(db: DBSession, profile: CurrentEmployee, period: str = Query("
 @router.get("/summary", response_model=AttendancePeriodResponse)
 def attendance_summary(db: DBSession, profile: CurrentEmployee, period: str = Query("monthly", pattern="^(daily|weekly|monthly)$")):
     return attendance_service.get_attendance_for_profile(db, profile, period)
+
+
+@router.get("", response_model=PaginatedAttendance)
+def list_attendance(
+    db: DBSession,
+    _: RequireAdmin,
+    employee_id: str | None = None,
+    page: int = Query(1, ge=1),
+    page_size: int = Query(50, ge=1, le=200),
+):
+    items, total = attendance_service.list_all_attendance(db, employee_code=employee_id, page=page, page_size=page_size)
+    return PaginatedAttendance(
+        items=[attendance_service._attendance_response(r) for r in items],
+        total=total,
+        page=page,
+        page_size=page_size,
+    )
 
 
 @router.get("/all", response_model=PaginatedAttendance)

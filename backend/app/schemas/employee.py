@@ -67,3 +67,32 @@ class PaginatedEmployees(BaseModel):
     total: int
     page: int
     page_size: int
+
+
+class AttendanceTrendWeek(BaseModel):
+    week: str
+    present_days: int
+    absent_days: int
+    avg_hours: float
+
+
+class LeaveTrendMonth(BaseModel):
+    month: str
+    days_taken: int
+    type_breakdown: dict[str, int]
+
+
+class WorkingHoursSummary(BaseModel):
+    avg_daily_hours: float
+    total_overtime_hours: float
+    late_arrival_rate: float
+
+
+class Employee360Response(BaseModel):
+    profile: EmployeeResponse
+    attendance_trend: list[AttendanceTrendWeek]
+    leave_trend: list[LeaveTrendMonth]
+    working_hours_summary: WorkingHoursSummary
+    anomalies: list[dict]
+    risk_signals: dict | None
+    recommendations: list[str]

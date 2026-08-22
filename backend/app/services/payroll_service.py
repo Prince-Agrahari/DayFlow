@@ -56,3 +56,27 @@ def update_payroll(db: Session, employee_code: str, payload: PayrollUpdateReques
     db.commit()
     db.refresh(payroll)
     return payroll
+
+
+def get_payroll_history(db: Session, profile: EmployeeProfile) -> list[dict]:
+    from datetime import date
+
+    payroll = get_payroll_by_profile(db, profile)
+    today = date.today()
+    history = []
+    year, month = today.year, today.month
+    for i in range(3):
+        m = month - i
+        y = year
+        while m <= 0:
+            m += 12
+            y -= 1
+        history.append(
+            {
+                "id": i + 1,
+                "month": f"{y}-{m:02d}",
+                "net_salary": payroll.net_salary,
+                "status": "PAID",
+            }
+        )
+    return history

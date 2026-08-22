@@ -4,7 +4,7 @@ from fastapi import APIRouter, HTTPException, Query, status
 
 from app.api.deps import CurrentEmployee, CurrentUser, DBSession, RequireAdmin
 from app.models.enums import UserRole
-from app.schemas.payroll import PaginatedPayroll, PayrollResponse, PayrollUpdateRequest
+from app.schemas.payroll import PaginatedPayroll, PayrollHistoryItem, PayrollResponse, PayrollUpdateRequest
 from app.services import payroll_service
 from app.services.mappers import payroll_to_response
 
@@ -15,6 +15,11 @@ router = APIRouter(prefix="/payroll", tags=["Payroll"])
 def my_payroll(db: DBSession, profile: CurrentEmployee):
     payroll = payroll_service.get_payroll_by_profile(db, profile)
     return payroll_to_response(payroll)
+
+
+@router.get("/me/history", response_model=list[PayrollHistoryItem])
+def my_payroll_history(db: DBSession, profile: CurrentEmployee):
+    return [PayrollHistoryItem(**item) for item in payroll_service.get_payroll_history(db, profile)]
 
 
 @router.get("", response_model=PaginatedPayroll)

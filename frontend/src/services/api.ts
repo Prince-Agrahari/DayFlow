@@ -1,5 +1,5 @@
 import axios from 'axios'
-import { TOKEN_KEY } from '../utils/constants'
+import { TOKEN_KEY, USER_KEY } from '../utils/constants'
 
 export const USE_MOCK = import.meta.env.VITE_USE_MOCK !== 'false'
 
@@ -23,7 +23,7 @@ api.interceptors.response.use(
   (error) => {
     if (error.response?.status === 401) {
       localStorage.removeItem(TOKEN_KEY)
-      localStorage.removeItem('dayflow_user')
+      localStorage.removeItem(USER_KEY)
       if (!window.location.pathname.startsWith('/login')) {
         window.location.href = '/login'
       }

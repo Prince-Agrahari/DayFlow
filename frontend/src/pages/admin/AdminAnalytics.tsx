@@ -8,6 +8,7 @@ import {
 } from '../../components/charts/Charts'
 import { analyticsService } from '../../services/analyticsService'
 import { formatCurrency, formatPercent } from '../../utils/format'
+import { ErrorState } from '../../components/ui/EmptyState'
 import type { DashboardAnalytics } from '../../types/api'
 
 export default function AdminAnalytics() {
@@ -18,14 +19,15 @@ export default function AdminAnalytics() {
   useEffect(() => {
     Promise.all([analyticsService.getDashboard(), analyticsService.getTeamAvailability()])
       .then(([d, t]) => { setDashboard(d); setTeamAvail(t) })
+      .catch(() => setDashboard(null))
       .finally(() => setLoading(false))
   }, [])
 
   if (loading) return <AdminLayout><DashboardSkeleton /></AdminLayout>
-  if (!dashboard) return null
+  if (!dashboard) return <AdminLayout><ErrorState title="Unable to load analytics" description="Check that the backend is running and you are logged in as admin." /></AdminLayout>
 
-  const riskData = Object.entries(dashboard.risk_distribution).map(([name, value]) => ({ name, value }))
-  const anomalyData = Object.entries(dashboard.anomaly_distribution).map(([name, value]) => ({ name, value }))
+  const riskData = Object.entries(dashboard.risk_distribution).map(([name, value]) => ({ name, value: Number(value) }))
+  const anomalyData = Object.entries(dashboard.anomaly_distribution).map(([name, value]) => ({ name, value: Number(value) }))
 
   return (
     <AdminLayout>

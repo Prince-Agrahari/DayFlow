@@ -66,14 +66,14 @@ def test_leave_apply_and_approve(client):
     emp_headers = _login(client, "emp@test.com", "emp12345")
     start = (date.today() + timedelta(days=10)).isoformat()
     end = (date.today() + timedelta(days=12)).isoformat()
-    res = client.post("/api/leaves", json={
+    res = client.post("/api/leave", json={
         "leave_type": "PAID", "start_date": start, "end_date": end, "reason": "Vacation trip",
     }, headers=emp_headers)
     assert res.status_code == 201
     leave_id = res.json()["id"]
 
     admin_headers = _login(client, "admin@test.com", "admin123")
-    res2 = client.put(f"/api/leaves/{leave_id}/approve", json={"comment": "Enjoy!"}, headers=admin_headers)
+    res2 = client.put(f"/api/leave/{leave_id}/approve", json={"comment": "Enjoy!"}, headers=admin_headers)
     assert res2.status_code == 200
     assert res2.json()["status"] == "APPROVED"
 
@@ -107,3 +107,30 @@ def test_health(client):
     res = client.get("/api/health")
     assert res.status_code == 200
     assert res.json()["status"] == "healthy"
+
+
+def test_leave_balances(client):
+    headers = _login(client, "emp@test.com", "emp12345")
+    res = client.get("/api/leave/balances", headers=headers)
+    assert res.status_code == 200
+    assert isinstance(res.json(), list)
+
+
+def test_employee_360(client, db_session):
+    from app.models.attendance import Attendance
+    from app.models.enums import AttendanceStatus
+    from app.models.employee import EmployeeProfile
+
+    profile = db_session.query(EmployeeProfile).filter(EmployeeProfile.employee_id == "EMP001").first()
+    for i in range(8):
+        d = date.today() - timedelta(days=i)
+        db_session.add(Attendance(employee_id=profile.id, date=d, status=AttendanceStatus.PRESENT, working_hours=8.0))
+    db_session.commit()
+
+    admin_headers = _login(client, "admin@test.com", "admin123")
+    res = client.get("/api/hr/employees/EMP001/360", headers=admin_headers)
+    assert res.status_code == 200
+    body = res.json()
+    assert body["profile"]["employee_id"] == "EMP001"
+    assert "attendance_trend" in body
+    assert "recommendations" in body

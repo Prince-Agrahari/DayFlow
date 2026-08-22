@@ -37,7 +37,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const value = useMemo(() => ({
     user, loading, login, logout,
-    isAuthenticated: !!user,
+    isAuthenticated: authService.isAuthenticated() && !!user,
     role: user?.role ?? null,
   }), [user, loading, login, logout])
 

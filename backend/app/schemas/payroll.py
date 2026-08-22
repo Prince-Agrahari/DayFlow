@@ -39,3 +39,10 @@ class PaginatedPayroll(BaseModel):
     total: int
     page: int
     page_size: int
+
+
+class PayrollHistoryItem(BaseModel):
+    id: int
+    month: str
+    net_salary: Decimal
+    status: str = "PAID"

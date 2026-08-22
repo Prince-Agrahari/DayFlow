@@ -144,3 +144,122 @@ def delete_employee(db: Session, profile: EmployeeProfile, actor: User) -> None:
     db.delete(profile.user)
     log_activity(db, user_id=actor.id, action=ActivityAction.EMPLOYEE_DELETED, description=f"Deleted employee {emp_id}", entity_type="employee", entity_id=emp_id)
     db.commit()
+
+
+def get_employee_360(db: Session, identifier: str) -> dict:
+    """Build Employee 360 view with attendance, leave, AI signals."""
+    from collections import defaultdict
+    from datetime import date, timedelta
+
+    from app.models.attendance import Attendance
+    from app.models.enums import AttendanceStatus, LeaveStatus
+    from app.models.leave_request import LeaveRequest
+    from app.services.ai_bridge import get_engine
+    from app.services.analytics_service import fetch_attendance_for_ai
+
+    profile = get_employee(db, identifier)
+    records = (
+        db.query(Attendance)
+        .filter(Attendance.employee_id == profile.id)
+        .order_by(Attendance.date.desc())
+        .limit(90)
+        .all()
+    )
+
+    weekly: dict[str, dict] = defaultdict(lambda: {"present": 0, "absent": 0, "hours": 0.0, "count": 0})
+    late_count = 0
+    total_hours = 0.0
+    present_count = 0
+    for r in records:
+        week = r.date.strftime("%Y-W%W")
+        if r.status == AttendanceStatus.PRESENT:
+            weekly[week]["present"] += 1
+            present_count += 1
+            hrs = float(r.working_hours or 0)
+            weekly[week]["hours"] += hrs
+            weekly[week]["count"] += 1
+            total_hours += hrs
+            if r.is_late:
+                late_count += 1
+        elif r.status == AttendanceStatus.ABSENT:
+            weekly[week]["absent"] += 1
+
+    attendance_trend = [
+        {
+            "week": w,
+            "present_days": v["present"],
+            "absent_days": v["absent"],
+            "avg_hours": round(v["hours"] / max(v["count"], 1), 1),
+        }
+        for w, v in sorted(weekly.items())[-8:]
+    ]
+
+    leaves = db.query(LeaveRequest).filter(LeaveRequest.employee_id == profile.id, LeaveRequest.status == LeaveStatus.APPROVED).all()
+    monthly_leave: dict[str, dict] = defaultdict(lambda: {"days": 0, "types": defaultdict(int)})
+    for lr in leaves:
+        month = lr.start_date.strftime("%Y-%m")
+        days = (lr.end_date - lr.start_date).days + 1
+        monthly_leave[month]["days"] += days
+        monthly_leave[month]["types"][lr.leave_type.value] += days
+
+    leave_trend = [
+        {"month": m, "days_taken": v["days"], "type_breakdown": dict(v["types"])}
+        for m, v in sorted(monthly_leave.items())[-6:]
+    ]
+
+    total_days = len(records) or 1
+    working_hours_summary = {
+        "avg_daily_hours": round(total_hours / max(present_count, 1), 1),
+        "total_overtime_hours": round(max(total_hours - present_count * 8, 0), 1),
+        "late_arrival_rate": round(late_count / total_days, 2),
+    }
+
+    emp_records = [r for r in fetch_attendance_for_ai(db) if r.get("employee_id") == profile.employee_id]
+    engine = get_engine()
+    anomalies_raw = engine.detect_anomalies(emp_records) if len(emp_records) >= 5 else []
+    anomalies = [
+        {
+            "employee_id": a.employee_id,
+            "employee_name": a.employee_name or profile.user.full_name,
+            "anomaly": a.anomaly,
+            "score": a.score,
+            "severity": a.severity.value,
+            "reason": a.reason,
+        }
+        for a in anomalies_raw
+    ]
+
+    metrics = {
+        "employee_name": profile.user.full_name,
+        "attendance_rate": present_count / total_days,
+        "late_rate": late_count / total_days,
+        "absence_trend_delta": sum(1 for r in records[:14] if r.status == AttendanceStatus.ABSENT) / max(min(14, total_days), 1),
+    }
+    risk = engine.calculate_risk(profile.employee_id, metrics)
+    risk_signals = None
+    if risk.risk_level.value != "LOW" or risk.risk_score >= 0.35:
+        risk_signals = {
+            "employee_id": profile.employee_id,
+            "employee_name": profile.user.full_name,
+            "risk_score": risk.risk_score,
+            "risk_level": risk.risk_level.value,
+            "reasons": risk.reasons,
+            "recommendations": risk.recommendations,
+        }
+
+    recommendations = list(risk.recommendations[:2]) if risk.recommendations else []
+    for a in anomalies_raw[:1]:
+        if a.recommendation and a.recommendation not in recommendations:
+            recommendations.append(a.recommendation)
+    if not recommendations:
+        recommendations = ["No immediate HR action required — continue monitoring."]
+
+    return {
+        "profile": employee_to_response(profile),
+        "attendance_trend": attendance_trend,
+        "leave_trend": leave_trend,
+        "working_hours_summary": working_hours_summary,
+        "anomalies": anomalies,
+        "risk_signals": risk_signals,
+        "recommendations": recommendations,
+    }

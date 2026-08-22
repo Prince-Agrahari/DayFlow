@@ -45,3 +45,10 @@ class LeaveBalanceResponse(BaseModel):
     total_days: float
     used_days: float
     remaining_days: float
+
+
+class PaginatedLeaves(BaseModel):
+    items: list[LeaveResponse]
+    total: int
+    page: int
+    page_size: int

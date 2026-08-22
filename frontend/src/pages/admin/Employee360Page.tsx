@@ -18,7 +18,10 @@ export default function Employee360Page() {
 
   useEffect(() => {
     if (!id) return
-    employeeService.get360(id).then(setData).finally(() => setLoading(false))
+    employeeService.get360(id)
+      .then(setData)
+      .catch(() => setData(null))
+      .finally(() => setLoading(false))
   }, [id])
 
   if (loading) return <AdminLayout><CardSkeleton /></AdminLayout>
