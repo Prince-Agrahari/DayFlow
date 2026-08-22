@@ -1,10 +1,20 @@
 """FastAPI application entry point."""
 
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.api.routes import ai, analytics, attendance, auth, employees, health, hr, leaves, notifications, payroll
 from app.config import settings
-from app.api.routes import health
+from app.db.session import init_db
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    init_db()
+    yield
+
 
 app = FastAPI(
     title=settings.app_name,
@@ -12,6 +22,7 @@ app = FastAPI(
     version="0.1.0",
     docs_url="/docs",
     redoc_url="/redoc",
+    lifespan=lifespan,
 )
 
 app.add_middleware(
@@ -23,6 +34,15 @@ app.add_middleware(
 )
 
 app.include_router(health.router, prefix=settings.api_prefix, tags=["Health"])
+app.include_router(auth.router, prefix=settings.api_prefix)
+app.include_router(employees.router, prefix=settings.api_prefix)
+app.include_router(attendance.router, prefix=settings.api_prefix)
+app.include_router(leaves.router, prefix=settings.api_prefix)
+app.include_router(payroll.router, prefix=settings.api_prefix)
+app.include_router(notifications.router, prefix=settings.api_prefix)
+app.include_router(analytics.router, prefix=settings.api_prefix)
+app.include_router(ai.router, prefix=settings.api_prefix)
+app.include_router(hr.router, prefix=settings.api_prefix)
 
 
 @app.get("/")

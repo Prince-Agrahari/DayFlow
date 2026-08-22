@@ -18,7 +18,7 @@ class Settings(BaseSettings):
     access_token_expire_minutes: int = 60
     algorithm: str = "HS256"
 
-    database_url: str = "postgresql://dayflow:dayflow_secret@localhost:5432/dayflow_hrm"
+    database_url: str = "sqlite:///./dayflow_dev.db"
 
     cors_origins: str = "http://localhost:5173,http://localhost:3000"
 

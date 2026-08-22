@@ -158,6 +158,41 @@ CREATE INDEX idx_notifications_user ON notifications(user_id);
 CREATE INDEX idx_notifications_unread ON notifications(user_id, is_read) WHERE is_read = FALSE;
 
 -- =============================================================================
+-- DEPARTMENTS
+-- =============================================================================
+
+CREATE TABLE departments (
+    id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    name            VARCHAR(100) NOT NULL UNIQUE,
+    description     VARCHAR(500),
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+ALTER TABLE employees ADD COLUMN IF NOT EXISTS department_id UUID REFERENCES departments(id);
+
+-- =============================================================================
+-- ACTIVITY LOGS
+-- =============================================================================
+
+CREATE TYPE activity_action AS ENUM (
+    'LOGIN', 'CHECK_IN', 'CHECK_OUT', 'LEAVE_APPLIED', 'LEAVE_APPROVED',
+    'LEAVE_REJECTED', 'PAYROLL_UPDATED', 'PROFILE_UPDATED', 'EMPLOYEE_CREATED', 'EMPLOYEE_DELETED'
+);
+
+CREATE TABLE activity_logs (
+    id              SERIAL PRIMARY KEY,
+    user_id         UUID REFERENCES users(id) ON DELETE SET NULL,
+    action          activity_action NOT NULL,
+    entity_type     VARCHAR(50),
+    entity_id       VARCHAR(50),
+    description     TEXT NOT NULL,
+    metadata        JSONB,
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX idx_activity_logs_user ON activity_logs(user_id);
+
+-- =============================================================================
 -- UPDATED_AT TRIGGER
 -- =============================================================================
 
