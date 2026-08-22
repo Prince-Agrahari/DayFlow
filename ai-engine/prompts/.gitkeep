@@ -1,0 +1,5 @@
+# Controlled prompt templates for Gemini integrations.
+# Do NOT include SQL generation instructions.
+#
+# copilot_system.txt   — HR copilot system prompt
+# assistant_system.txt — Employee assistant system prompt

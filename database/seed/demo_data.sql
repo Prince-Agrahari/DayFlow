@@ -1,0 +1,10 @@
+-- Demo seed data placeholder
+-- Implementation on feature/analytics-devops branch
+--
+-- Will include:
+--   1 admin user (admin@dayflow.com)
+--   20 employee users across 5 departments
+--   90 days attendance history
+--   Leave records with varied statuses
+--   Payroll structures
+--   Notifications

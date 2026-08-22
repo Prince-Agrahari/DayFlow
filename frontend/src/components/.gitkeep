@@ -1,0 +1,7 @@
+# Reusable UI components — feature/frontend-ui branch
+#
+# components/
+#   layout/     — Sidebar, TopNav, EmployeeLayout, HRLayout
+#   ui/         — Button, Card, Badge, Modal, Table, Input
+#   charts/     — KPICard, AttendanceChart, TrendChart
+#   common/     — LoadingState, EmptyState, ErrorState

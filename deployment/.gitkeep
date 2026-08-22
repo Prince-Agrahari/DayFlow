@@ -1,0 +1,4 @@
+# Deployment configurations for DayFlow HRM
+#
+# docker-compose.yml is at project root for local development.
+# Production deployment configs will be added here.
