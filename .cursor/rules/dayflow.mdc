@@ -1,0 +1,141 @@
+---
+description: DayFlow HRM — architecture, security, module ownership, and collaboration standards
+alwaysApply: true
+---
+
+# DayFlow — Intelligent HR Command Center
+
+## Core Principle
+
+```
+DATA → INTELLIGENCE → PRIORITY → RECOMMENDATION → HUMAN DECISION
+```
+
+AI supports HR decisions. It never makes irreversible employment decisions. Use explainable terms: **Attendance Anomaly**, **Workplace Risk Signal**, **Workload Signal**, **Leave Pattern**, **HR Recommendation**. Never claim medical/psychological diagnosis, guaranteed resignation, or automatic punishment.
+
+---
+
+## Architecture
+
+```
+frontend/  ──REST/JWT──▶  backend/  ──import──▶  ai-engine/
+                              │                      │
+                              └────import──▶  analytics/
+                              │
+                              └────PostgreSQL (database/)
+```
+
+| Module | Role |
+|--------|------|
+| `frontend/` | React SPA — UI only; calls backend REST APIs |
+| `backend/` | FastAPI — auth, RBAC, business logic, data access |
+| `ai-engine/` | ML (Isolation Forest) + Gemini — server-side only |
+| `analytics/` | KPIs, trends, HR priority queue |
+| `database/` | Schema (`schema.sql`), seed data |
+| `docs/` | Architecture, API contract, git workflow |
+
+Frontend never touches PostgreSQL or Gemini directly. Backend is the sole HTTP entry point.
+
+---
+
+## Technology Stack
+
+| Layer | Stack |
+|-------|-------|
+| Frontend | React, TypeScript, Vite, Tailwind CSS, React Router, Axios, Recharts, Lucide React |
+| Backend | Python, FastAPI, SQLAlchemy, PostgreSQL, Pydantic, JWT, bcrypt |
+| AI/ML | Google Gemini API, Pandas, NumPy, Scikit-learn, Isolation Forest |
+| DevOps | Git, GitHub, Docker |
+
+Environment variables via `.env` (never committed). Use `.env.example` for templates.
+
+---
+
+## Module Ownership — Do Not Cross Boundaries
+
+| Branch | Owns | Must NOT modify |
+|--------|------|-----------------|
+| `feature/frontend-ui` | `frontend/` | `backend/`, `ai-engine/`, `analytics/`, `database/` |
+| `feature/backend-hrms` | `backend/` | `frontend/`, `ai-engine/` internals |
+| `feature/ai-intelligence` | `ai-engine/` | `frontend/`, unrelated backend modules |
+| `feature/analytics-devops` | `analytics/`, `database/`, `deployment/`, `tests/` | `frontend/`, unrelated backend modules |
+
+**Never modify unrelated modules.** Shared files (`docs/`, `.env.example`, `docker-compose.yml`) require team agreement.
+
+---
+
+## API Contract Rules
+
+- **Single source of truth:** `docs/api-contract.md`
+- Frontend types in `frontend/src/types/api.ts` must mirror the contract
+- Backend Pydantic schemas in `backend/app/schemas/` must mirror the contract
+- Update `docs/api-contract.md` before or with any API shape change
+- Cross-module endpoints (`/ai/*`, `/analytics/*`, `/hr/*`) require coordinated PR review
+
+---
+
+## Security Rules
+
+- JWT authentication + role-based authorization (EMPLOYEE, ADMIN)
+- Passwords hashed with bcrypt — never store or log plaintext
+- Employee data isolation: employees access only their own records
+- CORS whitelist via environment variable
+- Input validation on all endpoints (Pydantic)
+- **Never commit `.env` or secrets** (keys, tokens, credentials)
+- **Never expose `GEMINI_API_KEY` to frontend** — server-side only
+- Frontend uses only `VITE_*` env vars; no server secrets in React code
+- LLM must not generate unrestricted SQL — use pre-fetched structured data only
+
+---
+
+## Git Safety Rules
+
+- **Never force push** (`git push --force`)
+- **Never push directly to `main`** — merge via PR only
+- **Never push another developer's branch**
+- Work on assigned feature branch only
+- Small, focused commits with conventional prefixes: `feat:`, `fix:`, `docs:`, `test:`, `refactor:`
+- Run tests/build before committing:
+  - Backend: `pytest tests/ -v`
+  - Frontend: `npm run build`
+- Only create commits when explicitly requested
+
+---
+
+## Coding Conventions
+
+### General
+
+- Minimize scope — smallest correct diff; no unrelated changes
+- Prefer reusable components (`frontend/src/components/`) and services (`backend/app/services/`)
+- Do not rewrite working code unnecessarily
+- Match existing naming, types, and patterns in each module
+
+### Python (backend, ai-engine, analytics)
+
+- Python 3.11+, type hints on public functions
+- Pydantic for request/response validation; SQLAlchemy ORM for DB
+- Business logic in `services/`, not route handlers
+
+### TypeScript (frontend)
+
+- Strict TypeScript, functional React components with hooks
+- Tailwind CSS for styling; API calls via `frontend/src/api/client.ts`
+- Include loading, empty, and error states for data views
+
+### AI Features
+
+- Return explainable outputs with `reason`, `severity`, `recommendations`
+- HR Copilot and Employee Assistant use controlled prompts + structured context
+- Employee assistant returns only authenticated user's authorized data
+- Human-in-the-loop: AI recommends; HR decides
+
+---
+
+## Pre-Commit Checklist
+
+- [ ] Changes limited to owned module (+ agreed shared docs)
+- [ ] API contract updated if endpoints changed
+- [ ] No `.env` or secrets in diff
+- [ ] Tests pass / build succeeds
+- [ ] No Gemini key or DB credentials in frontend
